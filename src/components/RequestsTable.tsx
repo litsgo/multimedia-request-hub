@@ -211,6 +211,32 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                   <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.notes}</p>
                 </div>
               )}
+              {selectedRequest.task_type === 'social_media_content' && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Facebook Post Image</h3>
+                  {selectedRequest.facebook_post_image_url ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button asChild variant="outline" size="sm">
+                        <a
+                          href={selectedRequest.facebook_post_image_url}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Download Image
+                        </a>
+                      </Button>
+                      <img
+                        src={selectedRequest.facebook_post_image_url}
+                        alt="Facebook post upload"
+                        className="max-h-48 rounded-md border"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No image uploaded.</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

@@ -49,6 +49,7 @@ export type Database = {
           created_at: string
           date_requested: string
           employee_id: string
+          facebook_post_image_url: string | null
           id: string
           notes: string | null
           status: Database["public"]["Enums"]["task_status"]
@@ -62,6 +63,7 @@ export type Database = {
           created_at?: string
           date_requested?: string
           employee_id: string
+          facebook_post_image_url?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["task_status"]
@@ -75,6 +77,7 @@ export type Database = {
           created_at?: string
           date_requested?: string
           employee_id?: string
+          facebook_post_image_url?: string | null
           id?: string
           notes?: string | null
           status?: Database["public"]["Enums"]["task_status"]

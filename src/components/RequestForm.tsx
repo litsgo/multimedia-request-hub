@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,6 +42,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useFindOrCreateEmployee } from '@/hooks/useEmployees';
 import { useCreateRequest } from '@/hooks/useRequests';
+import { supabase } from '@/integrations/supabase/client';
 import { TASK_TYPE_LABELS } from '@/types';
 import type { TaskType } from '@/types';
 import { toast } from 'sonner';
@@ -62,6 +63,15 @@ const formSchema = z.object({
   }),
   urgency: z.enum(['urgent', 'can_wait']),
   notes: z.string().max(500).optional(),
+  facebook_post_image: z.instanceof(File).nullable().optional(),
+}).superRefine((data, ctx) => {
+  if (data.task_type === 'social_media_content' && !data.facebook_post_image) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Facebook post image is required.',
+      path: ['facebook_post_image'],
+    });
+  }
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -88,8 +98,35 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       task_description: '',
       urgency: 'can_wait',
       notes: '',
+      facebook_post_image: null,
     },
   });
+
+  const taskType = form.watch('task_type');
+
+  useEffect(() => {
+    if (taskType !== 'social_media_content') {
+      form.setValue('facebook_post_image', null, { shouldValidate: true });
+    }
+  }, [form, taskType]);
+
+  const uploadFacebookPostImage = async (file: File, employeeId: string) => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `facebook-posts/${employeeId}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from('request-assets')
+      .upload(filePath, file, { upsert: false });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from('request-assets')
+      .getPublicUrl(filePath);
+
+    return publicUrlData.publicUrl;
+  };
 
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
@@ -108,12 +145,21 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
         ? `Urgency: ${urgencyLabel}\n${data.notes}`
         : `Urgency: ${urgencyLabel}`;
 
+      let facebookPostImageUrl: string | null = null;
+      if (data.task_type === 'social_media_content' && data.facebook_post_image) {
+        facebookPostImageUrl = await uploadFacebookPostImage(
+          data.facebook_post_image,
+          employee.employee_id
+        );
+      }
+
       await createRequest.mutateAsync({
         employee_id: employee.id,
         task_type: data.task_type,
         task_description: data.task_description,
         target_completion_date: data.target_completion_date.toISOString(),
         notes: notesWithUrgency,
+        facebook_post_image_url: facebookPostImageUrl,
       });
 
       toast.success('Task added successfully.', { duration: 10000 });
@@ -243,6 +289,31 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                 </FormItem>
               )}
             />
+
+            {taskType === 'social_media_content' && (
+              <FormField
+                control={form.control}
+                name="facebook_post_image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Facebook Post Image <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          field.onChange(file);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
