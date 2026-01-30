@@ -235,13 +235,21 @@ const Admin = () => {
             </div>
             <Dashboard 
               requests={requests.filter((request) => {
-                const query = searchQuery.toLowerCase();
+                const query = searchQuery.trim().toLowerCase();
+                if (!query) return true;
+
+                const taskId = request.task_id?.toLowerCase() ?? '';
+                const requester = request.employee?.full_name?.toLowerCase() ?? '';
+                const description = request.task_description?.toLowerCase() ?? '';
+                const branch = request.employee?.branch?.toLowerCase() ?? '';
+                const taskType = TASK_TYPE_LABELS[request.task_type as TaskType]?.toLowerCase() ?? '';
+
                 return (
-                  request.task_id.toLowerCase().includes(query) ||
-                  request.employee.full_name.toLowerCase().includes(query) ||
-                  request.task_description.toLowerCase().includes(query) ||
-                  request.employee.branch.toLowerCase().includes(query) ||
-                  TASK_TYPE_LABELS[request.task_type as TaskType].toLowerCase().includes(query)
+                  taskId.includes(query) ||
+                  requester.includes(query) ||
+                  description.includes(query) ||
+                  branch.includes(query) ||
+                  taskType.includes(query)
                 );
               })} 
               isLoading={isLoading} 
