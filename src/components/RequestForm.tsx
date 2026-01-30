@@ -178,12 +178,10 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
   }
 
   const handleCancelConfirm = () => {
-    toast.success('Cancelled successfully.', { duration: 10000 });
+    toast.success('Cancelled successfully.');
     form.reset();
     setIsCancelOpen(false);
-    setTimeout(() => {
-      navigate(0);
-    }, 10000);
+    navigate(0);
   };
 
   return (
