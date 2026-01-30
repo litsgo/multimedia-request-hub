@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,10 +23,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
-import { useUpdateRequestStatus } from '@/hooks/useRequests';
+import { useUpdateRequestStatus, useDeleteRequest } from '@/hooks/useRequests';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +48,9 @@ interface RequestsTableProps {
 
 export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const updateStatus = useUpdateRequestStatus();
+  const deleteRequest = useDeleteRequest();
   const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
+  const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
     const request = requests.find((r) => r.id === requestId);
@@ -46,6 +58,17 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
 
     try {
       await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteRequestId) return;
+
+    try {
+      await deleteRequest.mutateAsync(deleteRequestId);
+      setDeleteRequestId(null);
     } catch (error) {
       console.error(error);
     }
@@ -146,15 +169,26 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </Select>
               </TableCell>
               <TableCell>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedRequest(request)}
-                  className="gap-1"
-                >
-                  <Eye className="h-4 w-4" />
-                  View
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedRequest(request)}
+                    className="gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeleteRequestId(request.id)}
+                    className="gap-1 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -241,6 +275,26 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteRequestId} onOpenChange={() => setDeleteRequestId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete request?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

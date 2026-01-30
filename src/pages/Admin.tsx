@@ -10,7 +10,7 @@ import {
   isWithinInterval,
 } from 'date-fns';
 import * as XLSX from 'xlsx';
-import { Download } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ const Admin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const adminUsername = import.meta.env.VITE_ADMIN_USERNAME ?? 'multimediabugemco';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
@@ -220,7 +221,33 @@ const Admin = () => {
             </Card>
           </div>
         ) : (
-          <Dashboard requests={requests} isLoading={isLoading} hideNewRequestButton />
+          <>
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by task ID, requester name, or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <Dashboard 
+              requests={requests.filter((request) => {
+                const query = searchQuery.toLowerCase();
+                return (
+                  request.task_id.toLowerCase().includes(query) ||
+                  request.employee.full_name.toLowerCase().includes(query) ||
+                  request.task_description.toLowerCase().includes(query) ||
+                  request.employee.branch.toLowerCase().includes(query) ||
+                  TASK_TYPE_LABELS[request.task_type as TaskType].toLowerCase().includes(query)
+                );
+              })} 
+              isLoading={isLoading} 
+              hideNewRequestButton 
+            />
+          </>
         )}
       </main>
     </div>
