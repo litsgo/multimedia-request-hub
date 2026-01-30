@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
 import { useUpdateRequestStatus, useDeleteRequest } from '@/hooks/useRequests';
+import { sendStatusUpdateEmail } from '@/services/emailService';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,7 +55,29 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const [requestToDelete, setRequestToDelete] = useState<RequestWithEmployee | null>(null);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
-    await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+    const request = requests.find((r) => r.id === requestId);
+    if (!request) return;
+
+    try {
+      await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+      
+      // Send email notification only when status changes to "completed"
+      if (newStatus === 'completed' && request.employee.email) {
+        await sendStatusUpdateEmail({
+          taskId: request.task_id,
+          employeeEmail: request.employee.email,
+          employeeName: request.employee.full_name,
+          status: newStatus,
+          taskType: request.task_type,
+          description: request.task_description,
+          deadline: request.target_completion_date,
+        });
+        toast.success(`Task completed! Notification sent to ${request.employee.email}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update status');
+      console.error(error);
+    }
   };
 
   const handleDeleteRequest = async () => {
