@@ -58,10 +58,17 @@ export async function sendStatusUpdateEmail(payload: EmailNotificationPayload) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Failed to send email notification:', errorData);
+      console.error('Failed to send email notification:', {
+        status: response.status,
+        error: errorData,
+        to: payload.employeeEmail
+      });
     } else {
       const successData = await response.json();
-      console.log('Email notification sent successfully to:', payload.employeeEmail, successData);
+      console.log('Email notification sent successfully to:', payload.employeeEmail, {
+        messageId: successData.messageId,
+        taskId: payload.taskId
+      });
     }
   } catch (error) {
     console.error('Error sending email:', error);

@@ -66,9 +66,13 @@ serve(async (req) => {
 
     const resendData = await resendResponse.json();
 
+    console.log("Resend API Response Status:", resendResponse.status);
+    console.log("Resend API Response Data:", resendData);
+
     if (!resendResponse.ok) {
+      console.error("Failed to send email:", resendData);
       return new Response(
-        JSON.stringify({ error: resendData.message || "Failed to send email" }),
+        JSON.stringify({ error: resendData.message || "Failed to send email", details: resendData }),
         {
           status: resendResponse.status,
           headers: {
@@ -79,6 +83,7 @@ serve(async (req) => {
       );
     }
 
+    console.log("Email sent successfully to:", emailPayload.to);
     return new Response(
       JSON.stringify({ 
         success: true, 
