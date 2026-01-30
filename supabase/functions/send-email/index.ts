@@ -1,7 +1,4 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { Resend } from "https://cdn.jsdelivr.net/npm/resend@latest/index.js";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface EmailRequest {
   to: string;
@@ -38,19 +35,42 @@ serve(async (req) => {
       );
     }
 
-    // Send email using Resend
-    const response = await resend.emails.send({
-      from: "noreply@multimediahub.com",
-      to: emailPayload.to,
-      subject: emailPayload.subject,
-      html: emailPayload.html,
-    });
-
-    if (response.error) {
+    // Send email using Resend API
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
       return new Response(
-        JSON.stringify({ error: response.error.message }),
+        JSON.stringify({ error: "RESEND_API_KEY not configured" }),
         {
           status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    const resendResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: emailPayload.to,
+        subject: emailPayload.subject,
+        html: emailPayload.html,
+      }),
+    });
+
+    const resendData = await resendResponse.json();
+
+    if (!resendResponse.ok) {
+      return new Response(
+        JSON.stringify({ error: resendData.message || "Failed to send email" }),
+        {
+          status: resendResponse.status,
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
@@ -62,7 +82,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageId: response.data?.id,
+        messageId: resendData.id,
         message: "Email sent successfully"
       }),
       {
