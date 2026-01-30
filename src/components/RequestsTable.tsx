@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
+import { Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,12 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
 import { useUpdateRequestStatus } from '@/hooks/useRequests';
+import { sendStatusUpdateEmail } from '@/services/emailService';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 interface RequestsTableProps {
   requests: RequestWithEmployee[];
@@ -28,9 +40,32 @@ interface RequestsTableProps {
 
 export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const updateStatus = useUpdateRequestStatus();
+  const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
-    await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+    const request = requests.find((r) => r.id === requestId);
+    if (!request) return;
+
+    try {
+      await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+      
+      // Send email notification to employee
+      if (request.employee.email) {
+        await sendStatusUpdateEmail({
+          taskId: request.task_id,
+          employeeEmail: request.employee.email,
+          employeeName: request.employee.full_name,
+          status: newStatus,
+          taskType: request.task_type,
+          description: request.task_description,
+          deadline: request.target_completion_date,
+        });
+        toast.success(`Status updated and notification sent to ${request.employee.email}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update status');
+      console.error(error);
+    }
   };
 
   if (isLoading) {
@@ -81,6 +116,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
             <TableHead className="font-semibold">Date Requested</TableHead>
             <TableHead className="font-semibold">Deadline</TableHead>
             <TableHead className="font-semibold">Status</TableHead>
+            <TableHead className="font-semibold">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -126,10 +162,76 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                   </SelectContent>
                 </Select>
               </TableCell>
+              <TableCell>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedRequest(request)}
+                  className="gap-1"
+                >
+                  <Eye className="h-4 w-4" />
+                  View
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </Table>      <Dialog open={!!selectedRequest} onOpenChange={() => setSelectedRequest(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display">Task Details</DialogTitle>
+            <DialogDescription>Request ID: {selectedRequest?.task_id}</DialogDescription>
+          </DialogHeader>
+          {selectedRequest && (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Requester Name</h3>
+                  <p className="text-lg font-medium">{selectedRequest.employee.full_name}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Employee ID</h3>
+                  <p className="text-lg font-medium">{selectedRequest.employee.employee_id}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Branch / Department</h3>
+                  <p className="text-lg font-medium">{selectedRequest.employee.branch}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Email</h3>
+                  <p className="text-lg font-medium">{selectedRequest.employee.email || 'N/A'}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Task Type</h3>
+                  <TaskTypeBadge type={selectedRequest.task_type} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Status</h3>
+                  <StatusBadge status={selectedRequest.status} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Date Requested</h3>
+                  <p className="text-lg font-medium">{format(new Date(selectedRequest.date_requested), 'PPP')}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-1">Target Completion Date</h3>
+                  <p className="text-lg font-medium">{format(new Date(selectedRequest.target_completion_date), 'PPP')}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-2">Task Description</h3>
+                <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.task_description}</p>
+              </div>
+              {selectedRequest.notes && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h3>
+                  <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
