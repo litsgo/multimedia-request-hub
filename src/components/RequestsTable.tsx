@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,13 +23,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
-import { useUpdateRequestStatus } from '@/hooks/useRequests';
+import { useUpdateRequestStatus, useDeleteRequest } from '@/hooks/useRequests';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 
 interface RequestsTableProps {
   requests: RequestWithEmployee[];
@@ -38,10 +48,27 @@ interface RequestsTableProps {
 
 export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const updateStatus = useUpdateRequestStatus();
+  const deleteRequest = useDeleteRequest();
   const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<RequestWithEmployee | null>(null);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
     await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return;
+
+    try {
+      await deleteRequest.mutateAsync(requestToDelete.id);
+      toast.success('Request deleted successfully');
+      setDeleteDialogOpen(false);
+      setRequestToDelete(null);
+    } catch (error) {
+      toast.error('Failed to delete request');
+      console.error(error);
+    }
   };
 
   if (isLoading) {
@@ -139,15 +166,29 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </Select>
               </TableCell>
               <TableCell>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedRequest(request)}
-                  className="gap-1"
-                >
-                  <Eye className="h-4 w-4" />
-                  View
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedRequest(request)}
+                    className="gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setRequestToDelete(request);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -208,6 +249,31 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the request "{requestToDelete?.task_id}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="bg-secondary/50 p-3 rounded-md text-sm mb-4">
+            <p><strong>Requester:</strong> {requestToDelete?.employee.full_name}</p>
+            <p><strong>Task Type:</strong> {requestToDelete?.task_type}</p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteRequest}
+              disabled={deleteRequest.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteRequest.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
