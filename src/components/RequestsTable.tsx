@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Eye, Trash2, Mail } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,24 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
-import { useUpdateRequestStatus, useDeleteRequest } from '@/hooks/useRequests';
-import { sendTaskCompletionEmail } from '@/services/emailService';
+import { useUpdateRequestStatus } from '@/hooks/useRequests';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 
 interface RequestsTableProps {
   requests: RequestWithEmployee[];
@@ -49,56 +38,31 @@ interface RequestsTableProps {
 
 export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const updateStatus = useUpdateRequestStatus();
-  const deleteRequest = useDeleteRequest();
   const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [requestToDelete, setRequestToDelete] = useState<RequestWithEmployee | null>(null);
-  const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
-    await updateStatus.mutateAsync({ id: requestId, status: newStatus });
-  };
-
-  const handleDeleteRequest = async () => {
-    if (!requestToDelete) return;
+    const request = requests.find((r) => r.id === requestId);
+    if (!request) return;
 
     try {
-      await deleteRequest.mutateAsync(requestToDelete.id);
-      toast.success('Request deleted successfully');
-      // Close all dialogs immediately
-      setDeleteDialogOpen(false);
-      setRequestToDelete(null);
-      setSelectedRequest(null);
+      await updateStatus.mutateAsync({ id: requestId, status: newStatus });
+      
+      // Send email notification to employee
+      if (request.employee.email) {
+        await sendStatusUpdateEmail({
+          taskId: request.task_id,
+          employeeEmail: request.employee.email,
+          employeeName: request.employee.full_name,
+          status: newStatus,
+          taskType: request.task_type,
+          description: request.task_description,
+          deadline: request.target_completion_date,
+        });
+        toast.success(`Status updated and notification sent to ${request.employee.email}`);
+      }
     } catch (error) {
-      toast.error('Failed to delete request');
+      toast.error('Failed to update status');
       console.error(error);
-    }
-  };
-
-  const handleSendCompletionEmail = async () => {
-    if (!selectedRequest) return;
-    if (!selectedRequest.employee.email) {
-      toast.error('Employee email not found');
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      await sendTaskCompletionEmail({
-        taskId: selectedRequest.task_id,
-        employeeEmail: selectedRequest.employee.email,
-        employeeName: selectedRequest.employee.full_name,
-        taskType: selectedRequest.task_type,
-        description: selectedRequest.task_description,
-        deadline: selectedRequest.target_completion_date,
-      });
-      toast.success(`Completion notification sent to ${selectedRequest.employee.email}`);
-      setSelectedRequest(null);
-    } catch (error) {
-      toast.error('Failed to send email');
-      console.error(error);
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -197,29 +161,15 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 </Select>
               </TableCell>
               <TableCell>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSelectedRequest(request)}
-                    className="gap-1"
-                  >
-                    <Eye className="h-4 w-4" />
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setRequestToDelete(request);
-                      setDeleteDialogOpen(true);
-                    }}
-                    className="gap-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedRequest(request)}
+                  className="gap-1"
+                >
+                  <Eye className="h-4 w-4" />
+                  View
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -276,49 +226,10 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                   <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.notes}</p>
                 </div>
               )}
-              
-              {/* Send Completion Email Button */}
-              {selectedRequest.status === 'completed' && selectedRequest.employee.email && (
-                <div className="pt-4 border-t">
-                  <Button
-                    onClick={handleSendCompletionEmail}
-                    disabled={sendingEmail}
-                    className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Mail className="h-4 w-4" />
-                    {sendingEmail ? 'Sending...' : 'Send Completion Notification'}
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the request "{requestToDelete?.task_id}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="bg-secondary/50 p-3 rounded-md text-sm mb-4">
-            <p><strong>Requester:</strong> {requestToDelete?.employee.full_name}</p>
-            <p><strong>Task Type:</strong> {requestToDelete?.task_type}</p>
-          </div>
-          <div className="flex gap-3 justify-end">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteRequest}
-              disabled={deleteRequest.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteRequest.isPending ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

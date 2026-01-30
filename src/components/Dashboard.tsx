@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
-import { FileText, Clock, CheckCircle, XCircle, Plus, Filter, Search } from 'lucide-react';
+import { FileText, Clock, CheckCircle, XCircle, Plus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,6 @@ export function Dashboard({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<ReportPeriod>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredRequests = useMemo(() => {
     const now = new Date();
@@ -82,19 +80,8 @@ export function Dashboard({
       filtered = filtered.filter((req) => req.status === statusFilter);
     }
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((req) =>
-        req.task_id.toLowerCase().includes(query) ||
-        req.employee.full_name.toLowerCase().includes(query) ||
-        req.employee.email?.toLowerCase().includes(query) ||
-        req.task_description.toLowerCase().includes(query)
-      );
-    }
-
     return filtered;
-  }, [requests, reportPeriod, statusFilter, searchQuery]);
+  }, [requests, reportPeriod, statusFilter]);
 
   const stats = useMemo(() => {
     const total = filteredRequests.length;
@@ -167,43 +154,31 @@ export function Dashboard({
               All Requests
             </h3>
 
-            <div className="flex flex-col gap-3 w-full sm:w-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by Task ID, Name, Email or Description..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
+            <div className="flex flex-wrap gap-3">
+              <Select value={reportPeriod} onValueChange={(v) => setReportPeriod(v as ReportPeriod)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="weekly">This Week</SelectItem>
+                  <SelectItem value="monthly">This Month</SelectItem>
+                  <SelectItem value="yearly">This Year</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div className="flex flex-wrap gap-3">
-                <Select value={reportPeriod} onValueChange={(v) => setReportPeriod(v as ReportPeriod)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="weekly">This Week</SelectItem>
-                    <SelectItem value="monthly">This Month</SelectItem>
-                    <SelectItem value="yearly">This Year</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

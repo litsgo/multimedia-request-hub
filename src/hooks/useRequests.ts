@@ -76,23 +76,3 @@ export function useUpdateRequestStatus() {
     },
   });
 }
-
-export function useDeleteRequest() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('requests')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    },
-    onSuccess: async () => {
-      // Invalidate and refetch the requests query
-      await queryClient.invalidateQueries({ queryKey: ['requests'] });
-      await queryClient.refetchQueries({ queryKey: ['requests'] });
-    },
-  });
-}
