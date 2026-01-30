@@ -225,7 +225,7 @@ const Admin = () => {
             </Card>
           </div>
         ) : (
-          <Dashboard requests={requests} isLoading={isLoading} hideNewRequestButton />
+          <Dashboard hideNewRequestButton />
         )}
       </main>
     </div>
