@@ -239,6 +239,12 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 <h3 className="text-sm font-semibold text-muted-foreground mb-2">Task Description</h3>
                 <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.task_description}</p>
               </div>
+              {(selectedRequest.task_type === 'tarpaulin_design' || selectedRequest.task_type === 'poster_layout') && selectedRequest.dimension && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Dimension</h3>
+                  <p className="text-base text-foreground bg-secondary/50 p-4 rounded-md">{selectedRequest.dimension}</p>
+                </div>
+              )}
               {selectedRequest.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h3>

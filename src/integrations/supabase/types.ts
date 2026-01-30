@@ -48,6 +48,7 @@ export type Database = {
         Row: {
           created_at: string
           date_requested: string
+          dimension: string | null
           employee_id: string
           facebook_post_image_url: string | null
           id: string
@@ -62,6 +63,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date_requested?: string
+          dimension?: string | null
           employee_id: string
           facebook_post_image_url?: string | null
           id?: string
@@ -76,6 +78,7 @@ export type Database = {
         Update: {
           created_at?: string
           date_requested?: string
+          dimension?: string | null
           employee_id?: string
           facebook_post_image_url?: string | null
           id?: string

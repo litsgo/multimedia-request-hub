@@ -23,6 +23,7 @@ export interface Request {
   status: TaskStatus;
   notes: string | null;
   facebook_post_image_url: string | null;
+  dimension: string | null;
   created_at: string;
   updated_at: string;
   employee?: Employee;

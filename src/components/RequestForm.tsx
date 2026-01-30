@@ -61,15 +61,22 @@ const formSchema = z.object({
   target_completion_date: z.date({
     required_error: 'Target completion date is required',
   }),
-  urgency: z.enum(['urgent', 'can_wait']),
   notes: z.string().max(500).optional(),
   facebook_post_image: z.instanceof(File).nullable().optional(),
+  dimension: z.string().max(100).optional(),
 }).superRefine((data, ctx) => {
   if (data.task_type === 'social_media_content' && !data.facebook_post_image) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Facebook post image is required.',
       path: ['facebook_post_image'],
+    });
+  }
+  if ((data.task_type === 'tarpaulin_design' || data.task_type === 'poster_layout') && !data.dimension) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Dimension is required for tarpaulin and poster designs.',
+      path: ['dimension'],
     });
   }
 });
@@ -96,9 +103,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       email: '',
       task_type: 'other',
       task_description: '',
-      urgency: 'can_wait',
       notes: '',
       facebook_post_image: null,
+      dimension: '',
     },
   });
 
@@ -107,6 +114,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
   useEffect(() => {
     if (taskType !== 'social_media_content') {
       form.setValue('facebook_post_image', null, { shouldValidate: true });
+    }
+    if (taskType !== 'tarpaulin_design' && taskType !== 'poster_layout') {
+      form.setValue('dimension', '', { shouldValidate: true });
     }
   }, [form, taskType]);
 
@@ -140,11 +150,6 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       });
 
       // Then create the request
-      const urgencyLabel = data.urgency === 'urgent' ? 'Urgent' : 'Can Wait';
-      const notesWithUrgency = data.notes
-        ? `Urgency: ${urgencyLabel}\n${data.notes}`
-        : `Urgency: ${urgencyLabel}`;
-
       let facebookPostImageUrl: string | null = null;
       if (data.task_type === 'social_media_content' && data.facebook_post_image) {
         facebookPostImageUrl = await uploadFacebookPostImage(
@@ -158,8 +163,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
         task_type: data.task_type,
         task_description: data.task_description,
         target_completion_date: data.target_completion_date.toISOString(),
-        notes: notesWithUrgency,
+        notes: data.notes || null,
         facebook_post_image_url: facebookPostImageUrl,
+        dimension: data.dimension || null,
       });
 
       toast.success('Task added successfully.', { duration: 10000 });
@@ -288,6 +294,27 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               )}
             />
 
+            {(taskType === 'tarpaulin_design' || taskType === 'poster_layout') && (
+              <FormField
+                control={form.control}
+                name="dimension"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Dimension <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., 3ft x 5ft, A4, 1920x1080px"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             {taskType === 'social_media_content' && (
               <FormField
                 control={form.control}
@@ -350,30 +377,6 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="urgency"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Urgency <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select urgency" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="urgent">Urgent</SelectItem>
-                      <SelectItem value="can_wait">Can Wait</SelectItem>
-                    </SelectContent>
-                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
