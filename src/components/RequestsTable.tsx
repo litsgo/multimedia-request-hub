@@ -46,22 +46,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
 
     try {
       await updateStatus.mutateAsync({ id: requestId, status: newStatus });
-      
-      // Send email notification to employee
-      if (request.employee.email) {
-        await sendStatusUpdateEmail({
-          taskId: request.task_id,
-          employeeEmail: request.employee.email,
-          employeeName: request.employee.full_name,
-          status: newStatus,
-          taskType: request.task_type,
-          description: request.task_description,
-          deadline: request.target_completion_date,
-        });
-        toast.success(`Status updated and notification sent to ${request.employee.email}`);
-      }
     } catch (error) {
-      toast.error('Failed to update status');
       console.error(error);
     }
   };

@@ -33,9 +33,9 @@ export interface RequestWithEmployee extends Request {
 
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   tarpaulin_design: 'Tarpaulin Design',
-  video_editing: 'Video Editing',
+  video_editing: 'Photo/Documentation',
   poster_layout: 'Poster Layout',
-  social_media_content: 'Social Media Content',
+  social_media_content: 'Facebook Post',
   other: 'Other',
 };
 
