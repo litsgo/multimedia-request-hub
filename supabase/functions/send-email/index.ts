@@ -6,6 +6,10 @@ interface EmailRequest {
   html: string;
 }
 
+interface ResendError {
+  message?: string;
+}
+
 serve(async (req) => {
   // Enable CORS
   if (req.method === "OPTIONS") {
@@ -64,11 +68,12 @@ serve(async (req) => {
       }),
     });
 
-    const resendData = await resendResponse.json();
+    const resendData: ResendError | { id: string } = await resendResponse.json();
 
     if (!resendResponse.ok) {
+      const errorMsg = (resendData as ResendError).message || "Failed to send email";
       return new Response(
-        JSON.stringify({ error: resendData.message || "Failed to send email" }),
+        JSON.stringify({ error: errorMsg }),
         {
           status: resendResponse.status,
           headers: {
@@ -82,7 +87,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageId: resendData.id,
+        messageId: (resendData as { id: string }).id,
         message: "Email sent successfully"
       }),
       {
