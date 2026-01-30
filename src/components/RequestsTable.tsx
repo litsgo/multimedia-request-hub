@@ -27,11 +27,9 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
 import { useUpdateRequestStatus } from '@/hooks/useRequests';
-import { sendStatusUpdateEmail } from '@/services/emailService';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 
 interface RequestsTableProps {
   requests: RequestWithEmployee[];
@@ -43,29 +41,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
-    const request = requests.find((r) => r.id === requestId);
-    if (!request) return;
-
-    try {
-      await updateStatus.mutateAsync({ id: requestId, status: newStatus });
-      
-      // Send email notification to employee
-      if (request.employee.email) {
-        await sendStatusUpdateEmail({
-          taskId: request.task_id,
-          employeeEmail: request.employee.email,
-          employeeName: request.employee.full_name,
-          status: newStatus,
-          taskType: request.task_type,
-          description: request.task_description,
-          deadline: request.target_completion_date,
-        });
-        toast.success(`Status updated and notification sent to ${request.employee.email}`);
-      }
-    } catch (error) {
-      toast.error('Failed to update status');
-      console.error(error);
-    }
+    await updateStatus.mutateAsync({ id: requestId, status: newStatus });
   };
 
   if (isLoading) {
