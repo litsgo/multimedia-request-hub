@@ -10,7 +10,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-bold font-display text-foreground sm:text-4xl">
-            Multimedia Request Hub
+            Multimedia Request Hub 
           </h2>
           <p className="mt-3 text-base text-muted-foreground sm:text-lg">
             Online Request form for Multimedia Services.
@@ -39,12 +39,12 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="font-display text-xl">Employee</CardTitle>
               <CardDescription>
-                Click the button for submitting a new multimedia request.
+                Click the button below to submit a multimedia request.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="secondary" className="w-full">
-                <Link to="/request">Go to Request Page</Link>
+                <Link to="/request">Go to Request Form</Link>
               </Button>
             </CardContent>
           </Card>
