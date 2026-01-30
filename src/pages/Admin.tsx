@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   format,
   startOfWeek,
@@ -33,13 +33,18 @@ import { Link } from 'react-router-dom';
 
 const Admin = () => {
   const { data: requests = [], isLoading } = useRequests();
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('admin:authenticated') === 'true';
-  });
+  // Check localStorage for authentication on component mount
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
+
+  // Reset authentication on component mount
+  useEffect(() => {
+    localStorage.removeItem('admin:authenticated');
+    setIsAuthenticated(false);
+  }, []);
 
   const adminUsername = import.meta.env.VITE_ADMIN_USERNAME ?? 'multimediabugemco';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
