@@ -89,8 +89,10 @@ export function useDeleteRequest() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['requests'] });
+    onSuccess: async () => {
+      // Invalidate and refetch the requests query
+      await queryClient.invalidateQueries({ queryKey: ['requests'] });
+      await queryClient.refetchQueries({ queryKey: ['requests'] });
     },
   });
 }
