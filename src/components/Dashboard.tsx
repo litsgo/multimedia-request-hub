@@ -26,8 +26,20 @@ import type { RequestWithEmployee, TaskStatus } from '@/types';
 type ReportPeriod = 'all' | 'weekly' | 'monthly' | 'yearly';
 type StatusFilter = 'all' | TaskStatus;
 
-export function Dashboard() {
-  const { data: requests = [], isLoading } = useRequests();
+interface DashboardProps {
+  requests?: RequestWithEmployee[];
+  isLoading?: boolean;
+  hideNewRequestButton?: boolean;
+}
+
+export function Dashboard({
+  requests: requestsProp,
+  isLoading: isLoadingProp,
+  hideNewRequestButton = false,
+}: DashboardProps) {
+  const { data: fetchedRequests = [], isLoading: fetchedLoading } = useRequests();
+  const requests = requestsProp ?? fetchedRequests;
+  const isLoading = isLoadingProp ?? fetchedLoading;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<ReportPeriod>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -93,20 +105,22 @@ export function Dashboard() {
             </p>
           </div>
 
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2 bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4" />
-                New Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="font-display text-xl">Submit New Request</DialogTitle>
-              </DialogHeader>
-              <RequestForm onSuccess={() => setIsFormOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          {!hideNewRequestButton ? (
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 bg-primary hover:bg-primary/90">
+                  <Plus className="h-4 w-4" />
+                  New Request
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-display text-xl">Submit New Request</DialogTitle>
+                </DialogHeader>
+                <RequestForm onSuccess={() => setIsFormOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          ) : null}
         </div>
 
         {/* Stats Cards */}

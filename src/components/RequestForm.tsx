@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,6 +29,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useFindOrCreateEmployee } from '@/hooks/useEmployees';
 import { useCreateRequest } from '@/hooks/useRequests';
@@ -43,12 +54,13 @@ const formSchema = z.object({
     .regex(employeeIdPattern, 'Employee ID must be in format YYYY-BBB (e.g., 2025-322)'),
   full_name: z.string().min(2, 'Full name must be at least 2 characters').max(100),
   branch: z.string().min(2, 'Branch is required').max(100),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  email: z.string().email('Invalid email'),
   task_type: z.enum(['tarpaulin_design', 'video_editing', 'poster_layout', 'social_media_content', 'other'] as const),
   task_description: z.string().min(10, 'Description must be at least 10 characters').max(1000),
   target_completion_date: z.date({
     required_error: 'Target completion date is required',
   }),
+  urgency: z.enum(['urgent', 'can_wait']),
   notes: z.string().max(500).optional(),
 });
 
@@ -60,8 +72,10 @@ interface RequestFormProps {
 
 export function RequestForm({ onSuccess }: RequestFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
   const findOrCreateEmployee = useFindOrCreateEmployee();
   const createRequest = useCreateRequest();
+  const navigate = useNavigate();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -72,6 +86,7 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       email: '',
       task_type: 'other',
       task_description: '',
+      urgency: 'can_wait',
       notes: '',
     },
   });
@@ -88,24 +103,42 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       });
 
       // Then create the request
+      const urgencyLabel = data.urgency === 'urgent' ? 'Urgent' : 'Can Wait';
+      const notesWithUrgency = data.notes
+        ? `Urgency: ${urgencyLabel}\n${data.notes}`
+        : `Urgency: ${urgencyLabel}`;
+
       await createRequest.mutateAsync({
         employee_id: employee.id,
         task_type: data.task_type,
         task_description: data.task_description,
         target_completion_date: data.target_completion_date.toISOString(),
-        notes: data.notes,
+        notes: notesWithUrgency,
       });
 
-      toast.success('Request submitted successfully!');
+      toast.success('Task added successfully.', { duration: 10000 });
       form.reset();
       onSuccess?.();
+      setTimeout(() => {
+        navigate(0);
+      }, 10000);
     } catch (error) {
       console.error('Error submitting request:', error);
-      toast.error('Failed to submit request. Please try again.');
+      const message = error instanceof Error ? error.message : 'Failed to submit request. Please try again.';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  const handleCancelConfirm = () => {
+    toast.success('Cancelled successfully.', { duration: 10000 });
+    form.reset();
+    setIsCancelOpen(false);
+    setTimeout(() => {
+      navigate(0);
+    }, 10000);
+  };
 
   return (
     <Form {...form}>
@@ -119,7 +152,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="employee_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Employee ID</FormLabel>
+                  <FormLabel>
+                    Employee ID <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="2025-322" {...field} />
                   </FormControl>
@@ -133,7 +168,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="full_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>
+                    Full Name <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Juan Dela Cruz" {...field} />
                   </FormControl>
@@ -147,7 +184,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="branch"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Branch / Department</FormLabel>
+                  <FormLabel>
+                    Branch / Department <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input placeholder="Marketing Department" {...field} />
                   </FormControl>
@@ -161,7 +200,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email (Optional)</FormLabel>
+                  <FormLabel>
+                    Email <span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="juan@company.com" {...field} />
                   </FormControl>
@@ -181,7 +222,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="task_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Task Type</FormLabel>
+                  <FormLabel>
+                    Task Type <span className="text-destructive">*</span>
+                  </FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -206,14 +249,16 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
               name="target_completion_date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Target Completion Date</FormLabel>
+                  <FormLabel>
+                    Target Completion Date <span className="text-destructive">*</span>
+                  </FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant="outline"
                           className={cn(
-                            'w-full pl-3 text-left font-normal',
+                            'w-full pl-3 text-left font-normal hover:bg-[#006633] hover:text-white',
                             !field.value && 'text-muted-foreground'
                           )}
                         >
@@ -240,6 +285,30 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="urgency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Urgency <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select urgency" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="can_wait">Can Wait</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           <FormField
@@ -247,7 +316,9 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
             name="task_description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Task Description</FormLabel>
+                <FormLabel>
+                  Task Description <span className="text-destructive">*</span>
+                </FormLabel>
                 <FormControl>
                   <Textarea
                     placeholder="Describe the multimedia task in detail..."
@@ -279,20 +350,50 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
           />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full bg-primary hover:bg-primary/90"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            'Submit Request'
-          )}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <AlertDialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsCancelOpen(true)}
+              disabled={isSubmitting}
+              className="hover:bg-red-600 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancel request?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to cancel this request? Your changes will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="hover:bg-[#006633] hover:text-white">No</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleCancelConfirm}
+                  className="bg-[#c40233] text-white hover:bg-[#a10028]"
+                >
+                  Yes
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button
+            type="submit"
+            className="bg-primary hover:bg-[#ffd800] hover:text-[#006633]"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              'Submit Request'
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );

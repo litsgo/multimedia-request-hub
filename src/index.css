@@ -18,8 +18,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Navy Blue Primary */
-    --primary: 222 47% 20%;
+    /* Green Primary */
+    --primary: 150 100% 20%;
     --primary-foreground: 210 40% 98%;
 
     /* Light Blue-Gray Secondary */
@@ -38,7 +38,7 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 222 47% 20%;
+    --ring: 150 100% 20%;
 
     --radius: 0.75rem;
 
@@ -53,7 +53,7 @@
     --status-cancelled-bg: 0 84% 95%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(222 47% 20%) 0%, hsl(217 91% 35%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(150 100% 20%) 0%, hsl(150 70% 30%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(12 76% 61%) 0%, hsl(25 95% 53%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
 
@@ -65,12 +65,12 @@
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 150 100% 20%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 47% 25%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 150 100% 20%;
   }
 
   .dark {
@@ -83,7 +83,7 @@
     --popover: 222 47% 9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 150 100% 20%;
     --primary-foreground: 222 47% 11%;
 
     --secondary: 222 47% 15%;
@@ -100,16 +100,16 @@
 
     --border: 222 47% 18%;
     --input: 222 47% 18%;
-    --ring: 217 91% 60%;
+    --ring: 150 100% 20%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 150 100% 20%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 47% 18%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 150 100% 20%;
   }
 }
 
