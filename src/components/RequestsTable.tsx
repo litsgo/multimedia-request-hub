@@ -63,8 +63,10 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
     try {
       await deleteRequest.mutateAsync(requestToDelete.id);
       toast.success('Request deleted successfully');
+      // Close all dialogs immediately
       setDeleteDialogOpen(false);
       setRequestToDelete(null);
+      setSelectedRequest(null);
     } catch (error) {
       toast.error('Failed to delete request');
       console.error(error);
