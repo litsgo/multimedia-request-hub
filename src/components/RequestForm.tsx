@@ -187,7 +187,7 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
     toast.success('Cancelled successfully.');
     form.reset();
     setIsCancelOpen(false);
-    navigate(0);
+    window.location.reload();
   };
 
   return (

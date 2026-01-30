@@ -69,6 +69,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
     try {
       await deleteRequest.mutateAsync(deleteRequestId);
       setDeleteRequestId(null);
+      window.location.reload();
     } catch (error) {
       console.error(error);
     }
