@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, Mail } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { TaskTypeBadge } from './TaskTypeBadge';
 import { useUpdateRequestStatus, useDeleteRequest } from '@/hooks/useRequests';
+import { sendTaskCompletionEmail } from '@/services/emailService';
 import type { RequestWithEmployee, TaskStatus } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,6 +53,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
   const [selectedRequest, setSelectedRequest] = useState<RequestWithEmployee | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<RequestWithEmployee | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const handleStatusChange = async (requestId: string, newStatus: TaskStatus) => {
     await updateStatus.mutateAsync({ id: requestId, status: newStatus });
@@ -70,6 +72,33 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
     } catch (error) {
       toast.error('Failed to delete request');
       console.error(error);
+    }
+  };
+
+  const handleSendCompletionEmail = async () => {
+    if (!selectedRequest) return;
+    if (!selectedRequest.employee.email) {
+      toast.error('Employee email not found');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      await sendTaskCompletionEmail({
+        taskId: selectedRequest.task_id,
+        employeeEmail: selectedRequest.employee.email,
+        employeeName: selectedRequest.employee.full_name,
+        taskType: selectedRequest.task_type,
+        description: selectedRequest.task_description,
+        deadline: selectedRequest.target_completion_date,
+      });
+      toast.success(`Completion notification sent to ${selectedRequest.employee.email}`);
+      setSelectedRequest(null);
+    } catch (error) {
+      toast.error('Failed to send email');
+      console.error(error);
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -245,6 +274,20 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                 <div>
                   <h3 className="text-sm font-semibold text-muted-foreground mb-2">Notes</h3>
                   <p className="text-base text-foreground whitespace-pre-wrap bg-secondary/50 p-4 rounded-md">{selectedRequest.notes}</p>
+                </div>
+              )}
+              
+              {/* Send Completion Email Button */}
+              {selectedRequest.status === 'completed' && selectedRequest.employee.email && (
+                <div className="pt-4 border-t">
+                  <Button
+                    onClick={handleSendCompletionEmail}
+                    disabled={sendingEmail}
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingEmail ? 'Sending...' : 'Send Completion Notification'}
+                  </Button>
                 </div>
               )}
             </div>
