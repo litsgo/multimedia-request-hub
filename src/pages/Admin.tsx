@@ -131,15 +131,9 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold font-display text-foreground">Please enter your login credentials.</h2>
-            <p className="text-muted-foreground">
-              For Admin Only.
-            </p>
-          </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end mb-6">
           {isAuthenticated ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 justify-end w-full">
               <Select
                 value={reportPeriod}
                 onValueChange={(value) => setReportPeriod(value as 'weekly' | 'monthly' | 'yearly')}
