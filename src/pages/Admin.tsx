@@ -39,38 +39,19 @@ const Admin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [reportPeriod, setReportPeriod] = useState<'weekly' | 'monthly' | 'yearly'>('weekly');
+  const [reportPeriod, setReportPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [searchQuery, setSearchQuery] = useState('');
 
   const adminUsername = import.meta.env.VITE_ADMIN_USERNAME ?? 'multimediabugemco';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
 
+  // TEMP: Remove date filter, include all requests for export
   const exportRows = useMemo(() => {
-    const now = new Date();
-    let start: Date;
-    let end: Date;
-
-    switch (reportPeriod) {
-      case 'monthly':
-        start = startOfMonth(now);
-        end = endOfMonth(now);
-        break;
-      case 'yearly':
-        start = startOfYear(now);
-        end = endOfYear(now);
-        break;
-      case 'weekly':
-      default:
-        start = startOfWeek(now, { weekStartsOn: 1 });
-        end = endOfWeek(now, { weekStartsOn: 1 });
-        break;
+    if (requests.length > 0) {
+      // eslint-disable-next-line no-console
+      console.log('All request dates:', requests.map(r => r.date_requested));
     }
-
-    return requests
-      .filter((request) =>
-        isWithinInterval(new Date(request.date_requested), { start, end })
-      )
-      .map((request: RequestWithEmployee) => ({
+    return requests.map((request: RequestWithEmployee) => ({
       'Task ID': request.task_id,
       'Requester Name': request.employee.full_name,
       'Employee ID': request.employee.employee_id,
@@ -83,7 +64,7 @@ const Admin = () => {
       Status: STATUS_LABELS[request.status as TaskStatus],
       Notes: request.notes ?? '',
     }));
-  }, [requests, reportPeriod]);
+  }, [requests]);
 
   const handleExport = () => {
     if (isLoading) {
@@ -136,13 +117,12 @@ const Admin = () => {
             <div className="flex flex-wrap gap-2 justify-end w-full">
               <Select
                 value={reportPeriod}
-                onValueChange={(value) => setReportPeriod(value as 'weekly' | 'monthly' | 'yearly')}
+                onValueChange={(value) => setReportPeriod(value as'monthly' | 'yearly')}
               >
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
