@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   format,
   startOfWeek,
@@ -36,6 +36,12 @@ const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('admin:authenticated') === 'true';
   });
+
+  // Always show login page when navigating to Admin Dashboard
+  useEffect(() => {
+    localStorage.removeItem('admin:authenticated');
+    setIsAuthenticated(false);
+  }, []);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
