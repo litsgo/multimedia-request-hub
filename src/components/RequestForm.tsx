@@ -120,6 +120,7 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
 
   const taskType = form.watch('task_type');
   const photoDocumentationDates = form.watch('photo_documentation_dates');
+  const [photoDocRange, setPhotoDocRange] = useState<{ from: Date | null; to?: Date | null }>({ from: null, to: null });
 
   useEffect(() => {
     if (taskType !== 'social_media_content') {
@@ -324,24 +325,63 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                             )}
                           >
                             {field.value && field.value.length > 0 ? (
-                              field.value.map((date: Date, idx: number) => (
-                                <span key={idx}>{format(date, 'PPP')}{idx < field.value.length - 1 ? ', ' : ''}</span>
-                              ))
+                              (() => {
+                                // Check if dates are a continuous range
+                                const sorted = [...field.value].sort((a, b) => a.getTime() - b.getTime());
+                                if (sorted.length > 1) {
+                                  let isContinuous = true;
+                                  for (let i = 1; i < sorted.length; i++) {
+                                    const prev = sorted[i - 1];
+                                    const curr = sorted[i];
+                                    if ((curr.getTime() - prev.getTime()) !== 86400000) {
+                                      isContinuous = false;
+                                      break;
+                                    }
+                                  }
+                                  if (isContinuous) {
+                                    // Show as range
+                                    return <span>{`${format(sorted[0], 'MMMM d')}–${format(sorted[sorted.length - 1], 'd, yyyy')}`}</span>;
+                                  }
+                                }
+                                // Otherwise, show as list
+                                return sorted.map((date: Date, idx: number) => (
+                                  <span key={idx}>{format(date, 'PPP')}{idx < sorted.length - 1 ? ', ' : ''}</span>
+                                ));
+                              })()
                             ) : (
-                              <span>Select dates</span>
+                              <span>Select dates or range</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="multiple"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
+                        <div className="space-y-2">
+                          <Calendar
+                            mode="range"
+                            selected={photoDocRange}
+                            onSelect={(range) => {
+                              setPhotoDocRange({ from: range?.from ?? null, to: range?.to ?? null });
+                              if (range?.from && range?.to) {
+                                // Generate all dates between from and to
+                                const dates = [];
+                                let currentDate = new Date(range.from);
+                                while (currentDate <= range.to) {
+                                  dates.push(new Date(currentDate));
+                                  currentDate.setDate(currentDate.getDate() + 1);
+                                }
+                                field.onChange(dates);
+                              } else if (range?.from) {
+                                field.onChange([range.from]);
+                              } else {
+                                field.onChange([]);
+                              }
+                            }}
+                            disabled={(date) => date < new Date()}
+                            initialFocus
+                          />
+                          <div className="text-xs text-muted-foreground">Select a range to auto-fill all days.</div>
+                        </div>
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
