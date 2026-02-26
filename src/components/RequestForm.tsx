@@ -57,6 +57,7 @@ const formSchema = z.object({
   branch: z.string().min(2, 'Branch is required').max(100),
   email: z.string().email('Invalid email'),
   task_type: z.enum(['tarpaulin_design', 'video_editing', 'poster_layout', 'social_media_content', 'other'] as const),
+  photo_documentation_dates: z.array(z.date()).optional(),
   task_description: z.string().min(10, 'Description must be at least 10 characters').max(1000),
   target_completion_date: z.date({
     required_error: 'Target completion date is required',
@@ -77,6 +78,13 @@ const formSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: 'Dimension is required for tarpaulin and poster designs.',
       path: ['dimension'],
+    });
+  }
+  if (data.task_type === 'video_editing' && (!data.photo_documentation_dates || data.photo_documentation_dates.length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Please select at least one date for Photo/Documentation.',
+      path: ['photo_documentation_dates'],
     });
   }
 });
@@ -106,10 +114,12 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       notes: '',
       facebook_post_image: null,
       dimension: '',
+      photo_documentation_dates: [],
     },
   });
 
   const taskType = form.watch('task_type');
+  const photoDocumentationDates = form.watch('photo_documentation_dates');
 
   useEffect(() => {
     if (taskType !== 'social_media_content') {
@@ -293,6 +303,52 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                 </FormItem>
               )}
             />
+
+            {taskType === 'video_editing' && (
+              <FormField
+                control={form.control}
+                name="photo_documentation_dates"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Photo/Documentation Dates <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              'w-full pl-3 text-left font-normal hover:bg-[#006633] hover:text-white',
+                              !field.value || field.value.length === 0 ? 'text-muted-foreground' : ''
+                            )}
+                          >
+                            {field.value && field.value.length > 0 ? (
+                              field.value.map((date: Date, idx: number) => (
+                                <span key={idx}>{format(date, 'PPP')}{idx < field.value.length - 1 ? ', ' : ''}</span>
+                              ))
+                            ) : (
+                              <span>Select dates</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="multiple"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {(taskType === 'tarpaulin_design' || taskType === 'poster_layout') && (
               <FormField
