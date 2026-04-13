@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { FileText, Clock, CheckCircle, XCircle, Plus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ export function Dashboard({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<ReportPeriod>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const filteredRequests = useMemo(() => {
     const now = new Date();
@@ -57,10 +59,12 @@ export function Dashboard({
           start = startOfWeek(now, { weekStartsOn: 1 });
           end = endOfWeek(now, { weekStartsOn: 1 });
           break;
-        case 'monthly':
-          start = startOfMonth(now);
-          end = endOfMonth(now);
+        case 'monthly': {
+          const [year, month] = selectedMonth.split('-').map(Number);
+          start = startOfMonth(new Date(year, month - 1));
+          end = endOfMonth(new Date(year, month - 1));
           break;
+        }
         case 'yearly':
           start = startOfYear(now);
           end = endOfYear(now);
@@ -81,7 +85,7 @@ export function Dashboard({
     }
 
     return filtered;
-  }, [requests, reportPeriod, statusFilter]);
+  }, [requests, reportPeriod, statusFilter, selectedMonth]);
 
   const stats = useMemo(() => {
     const total = filteredRequests.length;
@@ -154,7 +158,7 @@ export function Dashboard({
               All Requests
             </h3>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
               <Select value={reportPeriod} onValueChange={(v) => setReportPeriod(v as ReportPeriod)}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Period" />
@@ -162,10 +166,19 @@ export function Dashboard({
                 <SelectContent>
                   <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="weekly">This Week</SelectItem>
-                  <SelectItem value="monthly">This Month</SelectItem>
+                  <SelectItem value="monthly">By Month</SelectItem>
                   <SelectItem value="yearly">This Year</SelectItem>
                 </SelectContent>
               </Select>
+
+              {reportPeriod === 'monthly' ? (
+                <Input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(event) => setSelectedMonth(event.target.value)}
+                  className="w-[180px]"
+                />
+              ) : null}
 
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
                 <SelectTrigger className="w-[140px]">

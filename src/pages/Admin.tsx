@@ -1,12 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import {
   format,
-  startOfWeek,
-  endOfWeek,
   startOfMonth,
   endOfMonth,
-  startOfYear,
-  endOfYear,
   isWithinInterval,
 } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -18,13 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useRequests } from '@/hooks/useRequests';
 import { STATUS_LABELS, TASK_TYPE_LABELS } from '@/types';
 import type { RequestWithEmployee, TaskStatus, TaskType } from '@/types';
@@ -45,32 +34,38 @@ const Admin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [reportPeriod, setReportPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [searchQuery, setSearchQuery] = useState('');
 
   const adminUsername = import.meta.env.VITE_ADMIN_USERNAME ?? 'multimediabugemco';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
 
-  // TEMP: Remove date filter, include all requests for export
   const exportRows = useMemo(() => {
-    if (requests.length > 0) {
-      // eslint-disable-next-line no-console
-      console.log('All request dates:', requests.map(r => r.date_requested));
-    }
-    return requests.map((request: RequestWithEmployee) => ({
-      'Task ID': request.task_id,
-      'Requester Name': request.employee.full_name,
-      'Employee ID': request.employee.employee_id,
-      'Branch / Department': request.employee.branch,
-      Email: request.employee.email ?? '',
-      'Task Type': TASK_TYPE_LABELS[request.task_type as TaskType],
-      Description: request.task_description,
-      'Date Requested': format(new Date(request.date_requested), 'yyyy-MM-dd'),
-      Deadline: format(new Date(request.target_completion_date), 'yyyy-MM-dd'),
-      Status: STATUS_LABELS[request.status as TaskStatus],
-      Notes: request.notes ?? '',
-    }));
-  }, [requests]);
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const interval = {
+      start: startOfMonth(new Date(year, month - 1)),
+      end: endOfMonth(new Date(year, month - 1)),
+    };
+
+    return requests
+      .filter((request) => {
+        const requestedDate = new Date(request.date_requested);
+        return isWithinInterval(requestedDate, interval);
+      })
+      .map((request: RequestWithEmployee) => ({
+        'Task ID': request.task_id,
+        'Requester Name': request.employee.full_name,
+        'Employee ID': request.employee.employee_id,
+        'Branch / Department': request.employee.branch,
+        Email: request.employee.email ?? '',
+        'Task Type': TASK_TYPE_LABELS[request.task_type as TaskType],
+        Description: request.task_description,
+        'Date Requested': format(new Date(request.date_requested), 'yyyy-MM-dd'),
+        Deadline: format(new Date(request.target_completion_date), 'yyyy-MM-dd'),
+        Status: STATUS_LABELS[request.status as TaskStatus],
+        Notes: request.notes ?? '',
+      }));
+  }, [requests, selectedMonth]);
 
   const handleExport = () => {
     if (isLoading) {
@@ -89,10 +84,18 @@ const Admin = () => {
     }
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Requests');
-    const fileName = `Multimedia Request Report Form-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    const csv = XLSX.utils.sheet_to_csv(worksheet);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const monthLabel = format(new Date(`${selectedMonth}-01`), 'yyyy-MM');
+    const fileName = `Multimedia Request Report Form-${monthLabel}.csv`;
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   const handleLogin = (event: React.FormEvent) => {
@@ -120,22 +123,20 @@ const Admin = () => {
       <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end mb-6">
           {isAuthenticated ? (
-            <div className="flex flex-wrap gap-2 justify-end w-full">
-              <Select
-                value={reportPeriod}
-                onValueChange={(value) => setReportPeriod(value as'monthly' | 'yearly')}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap gap-2 justify-end w-full items-center">
+              <Label htmlFor="export-month" className="shrink-0">
+                Export month
+              </Label>
+              <Input
+                id="export-month"
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                className="w-[180px]"
+              />
               <Button onClick={handleExport} className="gap-2" disabled={isLoading}>
                 <Download className="h-4 w-4" />
-                Download Excel Report
+                Download CSV Report
               </Button>
               <Button variant="outline" onClick={handleLogout}>
                 Log out
