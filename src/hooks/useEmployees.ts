@@ -65,6 +65,17 @@ export function useFindOrCreateEmployee() {
         .single();
 
       if (existing) {
+        // Update email if provided and different
+        if (data.email && existing.email !== data.email) {
+          const { data: updated, error: updateError } = await supabase
+            .from('employees')
+            .update({ email: data.email })
+            .eq('employee_id', data.employee_id)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          return updated;
+        }
         return existing;
       }
 

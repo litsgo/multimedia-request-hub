@@ -55,7 +55,6 @@ const formSchema = z.object({
     .regex(employeeIdPattern, 'Employee ID must be in format YYYY-BBB (e.g., 2025-322)'),
   full_name: z.string().min(2, 'Full name must be at least 2 characters').max(100),
   branch: z.string().min(2, 'Branch is required').max(100),
-  email: z.string().email('Invalid email'),
   task_type: z.enum(['tarpaulin_design', 'video_editing', 'poster_layout', 'social_media_content', 'other'] as const),
   photo_documentation_dates: z.array(z.date()).optional(),
   task_description: z.string().min(10, 'Description must be at least 10 characters').max(1000),
@@ -108,7 +107,6 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       employee_id: '',
       full_name: '',
       branch: '',
-      email: '',
       task_type: 'other',
       task_description: '',
       notes: '',
@@ -152,12 +150,18 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
   async function onSubmit(data: FormData) {
     setIsSubmitting(true);
     try {
+      // Get current user email
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        throw new Error('User not authenticated');
+      }
+
       // First, find or create the employee
       const employee = await findOrCreateEmployee.mutateAsync({
         employee_id: data.employee_id,
         full_name: data.full_name,
         branch: data.branch,
-        email: data.email || undefined,
+        email: user.email,
       });
 
       // Then create the request
@@ -250,22 +254,6 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                   </FormLabel>
                   <FormControl>
                     <Input placeholder="Marketing Department" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Email <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="juan@company.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

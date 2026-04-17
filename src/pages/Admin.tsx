@@ -6,7 +6,7 @@ import {
   isWithinInterval,
 } from 'date-fns';
 import * as XLSX from 'xlsx';
-import { Download, Search } from 'lucide-react';
+import { Download, Eye, EyeOff, Search } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Dashboard } from '@/components/Dashboard';
 import { Button } from '@/components/ui/button';
@@ -18,26 +18,26 @@ import { useRequests } from '@/hooks/useRequests';
 import { STATUS_LABELS, TASK_TYPE_LABELS } from '@/types';
 import type { RequestWithEmployee, TaskStatus, TaskType } from '@/types';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Admin = () => {
   const { data: requests = [], isLoading } = useRequests();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('admin:authenticated') === 'true';
   });
+  const navigate = useNavigate();
 
-  // Always show login page when navigating to Admin Dashboard
   useEffect(() => {
-    localStorage.removeItem('admin:authenticated');
-    setIsAuthenticated(false);
+    // Preserve admin authentication when redirected from the login page.
+    setIsAuthenticated(localStorage.getItem('admin:authenticated') === 'true');
   }, []);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [searchQuery, setSearchQuery] = useState('');
 
-  const adminUsername = import.meta.env.VITE_ADMIN_USERNAME ?? 'multimediabugemco';
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL ?? 'multimediabugemco@gmail.com';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
 
   const exportRows = useMemo(() => {
@@ -100,14 +100,14 @@ const Admin = () => {
 
   const handleLogin = (event: React.FormEvent) => {
     event.preventDefault();
-    if (username === adminUsername && password === adminPassword) {
+    if (email === adminEmail && password === adminPassword) {
       localStorage.setItem('admin:authenticated', 'true');
       setIsAuthenticated(true);
-      setUsername('');
+      setEmail('');
       setPassword('');
       toast.success('Logged in successfully.');
     } else {
-      toast.error('Invalid username or password.');
+      toast.error('Invalid email or password.');
     }
   };
 
@@ -115,6 +115,7 @@ const Admin = () => {
     localStorage.removeItem('admin:authenticated');
     setIsAuthenticated(false);
     toast.success('Logged out.');
+    navigate('/');
   };
 
   return (
@@ -155,34 +156,36 @@ const Admin = () => {
               <CardContent>
                 <form className="space-y-4" onSubmit={handleLogin}>
                   <div className="space-y-2">
-                    <Label htmlFor="admin-username">Username</Label>
+                    <Label htmlFor="admin-email">Email</Label>
                     <Input
-                      id="admin-username"
-                      autoComplete="username"
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      placeholder="Enter username"
+                      id="admin-email"
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="multimediabugemco@gmail.com"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="admin-password">Password</Label>
-                    <Input
-                      id="admin-password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="Enter password"
-                    />
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="admin-show-password"
-                        checked={showPassword}
-                        onCheckedChange={(checked) => setShowPassword(Boolean(checked))}
+                    <div className="relative">
+                      <Input
+                        id="admin-password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="Enter password"
+                        className="pr-10"
                       />
-                      <Label htmlFor="admin-show-password" className="text-sm text-muted-foreground">
-                        Show password
-                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((current) => !current)}
+                        className="absolute inset-y-0 right-3 flex items-center justify-center text-muted-foreground"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
                   </div>
                   <Button type="submit" className="w-full">

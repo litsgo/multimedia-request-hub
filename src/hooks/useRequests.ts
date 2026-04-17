@@ -59,6 +59,7 @@ export function useCreateRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['user-requests'] });
     },
   });
 }
@@ -77,6 +78,7 @@ export function useUpdateRequestStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['user-requests'] });
     },
   });
 }
@@ -95,6 +97,49 @@ export function useDeleteRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      queryClient.invalidateQueries({ queryKey: ['user-requests'] });
     },
+  });
+}
+
+export function useUserRequests() {
+  return useQuery({
+    queryKey: ['user-requests'],
+    queryFn: async (): Promise<RequestWithEmployee[]> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.email) throw new Error('User not authenticated');
+
+      // Find the employee record for this user
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('email', user.email)
+        .single();
+
+      if (employeeError || !employee) {
+        // Return empty array if no employee record found
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('requests')
+        .select(`
+          *,
+          employee:employees(*)
+        `)
+        .eq('employee_id', employee.id)
+        .order('date_requested', { ascending: false });
+
+      if (error) throw error;
+      
+      return (data || []).map(item => ({
+        ...item,
+        task_type: item.task_type as TaskType,
+        status: item.status as TaskStatus,
+        employee: item.employee as RequestWithEmployee['employee']
+      }));
+    },
+    enabled: !!supabase.auth.getUser(),
   });
 }
