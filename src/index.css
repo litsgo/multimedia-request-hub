@@ -146,3 +146,34 @@
     @apply backdrop-blur-sm bg-card/80;
   }
 }
+
+/* Dark mode: Force all text to white */
+.dark body,
+.dark .text-foreground,
+.dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6,
+.dark .text-lg, .dark .text-xl, .dark .text-2xl, .dark .text-3xl,
+.dark .text-sm, .dark .text-xs, .dark .text-base,
+.dark p, .dark span, .dark label,
+.dark .text-primary, .dark .text-secondary, .dark .text-muted, .dark .text-accent,
+.dark .text-card-foreground, .dark .text-popover-foreground,
+.dark .text-muted-foreground, .dark .text-destructive,
+.dark td, .dark th,
+.dark .font-medium, .dark .font-semibold, .dark .font-bold, .dark .font-normal {
+  color: #ffffff !important;
+}
+
+/* Dark mode: Keep Delete button text red */
+.dark .text-destructive,
+.dark button.text-destructive,
+.dark .hover\:text-destructive:hover,
+.dark [class*="text-destructive"] {
+  color: #ef4444 !important;
+}
+
+/* Dark mode: Status badge text white */
+.dark .text-status-pending,
+.dark .text-status-progress,
+.dark .text-status-completed,
+.dark .text-status-cancelled {
+  color: #ffffff !important;
+}

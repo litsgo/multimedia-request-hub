@@ -158,7 +158,7 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
                   onValueChange={(value) => handleStatusChange(request.id, value as TaskStatus)}
                   disabled={request.status === 'completed'}
                 >
-                  <SelectTrigger className="w-[140px] h-8 border-0 p-0 focus:ring-0" disabled={request.status === 'completed'}>
+                  <SelectTrigger className="w-[140px] h-8 border-0 p-0 focus:ring-0 bg-green-600 hover:bg-green-700 disabled:bg-green-600" disabled={request.status === 'completed'}>
                     <StatusBadge status={request.status} />
                   </SelectTrigger>
                   <SelectContent>
