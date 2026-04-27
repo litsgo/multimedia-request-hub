@@ -57,15 +57,15 @@ const formSchema = z.object({
   branch: z.string().min(2, 'Branch is required').max(100),
   task_type: z.enum(['tarpaulin_design', 'video_editing', 'poster_layout', 'social_media_content', 'other'] as const),
   photo_documentation_dates: z.array(z.date()).optional(),
-  task_description: z.string().min(10, 'Description must be at least 10 characters').max(1000),
+  task_description: z.string().min(10, 'Description must be at least 10 characters'),
   target_completion_date: z.date({
     required_error: 'Target completion date is required',
   }),
   notes: z.string().max(500).optional(),
-  facebook_post_image: z.instanceof(File).nullable().optional(),
+  facebook_post_image: z.instanceof(File).array().min(1, 'At least one image is required'),
   dimension: z.string().max(100).optional(),
 }).superRefine((data, ctx) => {
-  if (data.task_type === 'social_media_content' && !data.facebook_post_image) {
+  if (data.task_type === 'social_media_content' && (!data.facebook_post_image || data.facebook_post_image.length === 0)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'Facebook post image is required.',
@@ -110,7 +110,7 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
       task_type: 'other',
       task_description: '',
       notes: '',
-      facebook_post_image: null,
+      facebook_post_image: [],
       dimension: '',
       photo_documentation_dates: [],
     },
@@ -122,29 +122,35 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
 
   useEffect(() => {
     if (taskType !== 'social_media_content') {
-      form.setValue('facebook_post_image', null, { shouldValidate: true });
+      form.setValue('facebook_post_image', [], { shouldValidate: true });
     }
     if (taskType !== 'tarpaulin_design' && taskType !== 'poster_layout') {
       form.setValue('dimension', '', { shouldValidate: true });
     }
   }, [form, taskType]);
 
-  const uploadFacebookPostImage = async (file: File, employeeId: string) => {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const filePath = `facebook-posts/${employeeId}/${Date.now()}-${safeName}`;
-    const { error: uploadError } = await supabase.storage
-      .from('request-assets')
-      .upload(filePath, file, { upsert: false });
+  const uploadFacebookPostImages = async (files: File[], employeeId: string): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (const file of files) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `facebook-posts/${employeeId}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('request-assets')
+        .upload(filePath, file, { upsert: false });
 
-    if (uploadError) {
-      throw uploadError;
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('request-assets')
+        .getPublicUrl(filePath);
+
+      uploadedUrls.push(publicUrlData.publicUrl);
     }
-
-    const { data: publicUrlData } = supabase.storage
-      .from('request-assets')
-      .getPublicUrl(filePath);
-
-    return publicUrlData.publicUrl;
+    
+    return uploadedUrls;
   };
 
   async function onSubmit(data: FormData) {
@@ -166,11 +172,13 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
 
       // Then create the request
       let facebookPostImageUrl: string | null = null;
-      if (data.task_type === 'social_media_content' && data.facebook_post_image) {
-        facebookPostImageUrl = await uploadFacebookPostImage(
+      if (data.task_type === 'social_media_content' && data.facebook_post_image && data.facebook_post_image.length > 0) {
+        const uploadedUrls = await uploadFacebookPostImages(
           data.facebook_post_image,
           employee.employee_id
         );
+        // Store as JSON string since the column only supports one URL
+        facebookPostImageUrl = JSON.stringify(uploadedUrls);
       }
 
       await createRequest.mutateAsync({
@@ -406,17 +414,49 @@ export function RequestForm({ onSuccess }: RequestFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Facebook Post Image <span className="text-destructive">*</span>
+                      Facebook Post Images <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => {
-                          const file = event.target.files?.[0] ?? null;
-                          field.onChange(file);
-                        }}
-                      />
+                      <div className="space-y-4">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(event) => {
+                            const files = Array.from(event.target.files ?? []);
+                            field.onChange(files);
+                          }}
+                        />
+                        {field.value && field.value.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              Selected {field.value.length} image(s):
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {field.value.map((file: File, index: number) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-md text-sm"
+                                >
+                                  <span className="truncate max-w-[150px]">{file.name}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-4 w-4 p-0 hover:bg-destructive hover:text-white"
+                                    onClick={() => {
+                                      const newFiles = field.value.filter((_: File, i: number) => i !== index);
+                                      field.onChange(newFiles);
+                                    }}
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

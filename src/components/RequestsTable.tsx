@@ -255,27 +255,43 @@ export function RequestsTable({ requests, isLoading }: RequestsTableProps) {
               )}
               {selectedRequest.task_type === 'social_media_content' && (
                 <div>
-                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Facebook Post Image</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Facebook Post Images</h3>
                   {selectedRequest.facebook_post_image_url ? (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Button asChild variant="outline" size="sm">
-                        <a
-                          href={selectedRequest.facebook_post_image_url}
-                          download
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Download Image
-                        </a>
-                      </Button>
-                      <img
-                        src={selectedRequest.facebook_post_image_url}
-                        alt="Facebook post upload"
-                        className="max-h-48 rounded-md border"
-                      />
+                    <div>
+                      {(() => {
+                        let imageUrls: string[] = [];
+                        try {
+                          imageUrls = JSON.parse(selectedRequest.facebook_post_image_url);
+                        } catch {
+                          imageUrls = [selectedRequest.facebook_post_image_url];
+                        }
+                        return (
+                          <div className="flex flex-wrap gap-3">
+                            {imageUrls.map((url: string, index: number) => (
+                              <div key={index} className="space-y-2">
+                                <Button asChild variant="outline" size="sm">
+                                  <a
+                                    href={url}
+                                    download
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    Download Image {index + 1}
+                                  </a>
+                                </Button>
+                                <img
+                                  src={url}
+                                  alt={`Facebook post upload ${index + 1}`}
+                                  className="max-h-48 rounded-md border"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No image uploaded.</p>
+                    <p className="text-sm text-muted-foreground">No images uploaded.</p>
                   )}
                 </div>
               )}
