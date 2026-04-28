@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Bell, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
+import { Bell, CheckCircle, Clock, AlertCircle, X, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ interface RequesterSidebarProps {
 }
 
 export function RequesterSidebar({ isOpen, onClose }: RequesterSidebarProps) {
-  const { data: requests = [], isLoading } = useUserRequests();
+  const { data: requests = [], isLoading, error, refetch, isFetching } = useUserRequests();
 
   // Check for completed requests and create notifications
   const notifications = useMemo(() => {
@@ -56,6 +56,10 @@ export function RequesterSidebar({ isOpen, onClose }: RequesterSidebarProps) {
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -63,12 +67,42 @@ export function RequesterSidebar({ isOpen, onClose }: RequesterSidebarProps) {
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-lg font-semibold">My Requests</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isFetching}
+              title="Refresh requests"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <ScrollArea className="flex-1 p-4">
+          {/* Error Display */}
+          {error && (
+            <Card className="mb-4 border-red-300 bg-red-50">
+              <CardContent className="pt-4">
+                <p className="text-sm text-red-600">
+                  Error loading requests: {error.message}
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefresh}
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Notifications Section */}
           {notifications.length > 0 && (
             <Card className="mb-4">
@@ -95,10 +129,23 @@ export function RequesterSidebar({ isOpen, onClose }: RequesterSidebarProps) {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-4 text-muted-foreground">Loading...</div>
+                <div className="text-center py-4 text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2" />
+                  Loading...
+                </div>
               ) : requests.length === 0 ? (
                 <div className="text-center py-4 text-muted-foreground">
-                  No requests found. Create your first request!
+                  <p>No requests found.</p>
+                  <p className="text-xs mt-2">Create a new request to get started!</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRefresh}
+                    className="mt-3"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">

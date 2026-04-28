@@ -62,7 +62,7 @@ const formSchema = z.object({
     required_error: 'Target completion date is required',
   }),
   notes: z.string().max(500).optional(),
-  facebook_post_image: z.instanceof(File).array().min(1, 'At least one image is required'),
+  facebook_post_image: z.instanceof(File).array().optional(),
   dimension: z.string().max(100).optional(),
 }).superRefine((data, ctx) => {
   if (data.task_type === 'social_media_content' && (!data.facebook_post_image || data.facebook_post_image.length === 0)) {

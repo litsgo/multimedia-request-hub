@@ -106,21 +106,70 @@ export function useUserRequests() {
   return useQuery({
     queryKey: ['user-requests'],
     queryFn: async (): Promise<RequestWithEmployee[]> => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      if (!user?.email) throw new Error('User not authenticated');
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw new Error('User not authenticated');
+      }
+      
+      if (!user?.email) {
+        console.error('No user email found');
+        throw new Error('User not authenticated');
+      }
 
-      // Find the employee record for this user
-      const { data: employee, error: employeeError } = await supabase
+      console.log('Looking for employee with email:', user.email);
+
+      // First, try to find employee by exact email match
+      let { data: employee, error: employeeError } = await supabase
         .from('employees')
         .select('*')
         .eq('email', user.email)
         .single();
 
+      // If not found, try case-insensitive search
       if (employeeError || !employee) {
-        // Return empty array if no employee record found
+        console.log('Trying case-insensitive email search...');
+        const { data: employees } = await supabase
+          .from('employees')
+          .select('*')
+          .ilike('email', user.email);
+        
+        if (employees && employees.length > 0) {
+          employee = employees[0];
+          employeeError = null;
+        }
+      }
+
+      // If still not found, try to find by any employee that has this email in their data
+      if (!employee) {
+        console.log('Trying to find any employee with matching email...');
+        const { data: allEmployees } = await supabase
+          .from('employees')
+          .select('*');
+        
+        // Filter manually for email match (case-insensitive)
+        const matchingEmployee = allEmployees?.find(
+          e => e.email?.toLowerCase() === user.email.toLowerCase()
+        );
+        
+        if (matchingEmployee) {
+          employee = matchingEmployee;
+        }
+      }
+
+      if (employeeError) {
+        console.error('Employee lookup error:', employeeError);
+        throw employeeError;
+      }
+
+      if (!employee) {
+        console.log('No employee found for email:', user.email);
         return [];
       }
+
+      console.log('Found employee:', employee);
+      console.log('Looking for requests with employee_id:', employee.id);
 
       const { data, error } = await supabase
         .from('requests')
@@ -131,7 +180,12 @@ export function useUserRequests() {
         .eq('employee_id', employee.id)
         .order('date_requested', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Requests lookup error:', error);
+        throw error;
+      }
+      
+      console.log('Found requests:', data?.length || 0);
       
       return (data || []).map(item => ({
         ...item,
@@ -140,6 +194,5 @@ export function useUserRequests() {
         employee: item.employee as RequestWithEmployee['employee']
       }));
     },
-    enabled: !!supabase.auth.getUser(),
   });
 }
