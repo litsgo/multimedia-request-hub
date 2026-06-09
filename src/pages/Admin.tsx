@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useRequests } from '@/hooks/useRequests';
 import { STATUS_LABELS, TASK_TYPE_LABELS } from '@/types';
 import type { RequestWithEmployee, TaskStatus, TaskType } from '@/types';
@@ -39,6 +38,7 @@ const Admin = () => {
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL ?? 'multimediabugemco@gmail.com';
   const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? 'multimediabugemco@2025';
+
 
   const exportRows = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -135,6 +135,9 @@ const Admin = () => {
                 onChange={(event) => setSelectedMonth(event.target.value)}
                 className="w-[180px]"
               />
+              <Button asChild variant="outline" className="gap-2">
+                <Link to="/requester-accounts">Manage Requester Account</Link>
+              </Button>
               <Button onClick={handleExport} className="gap-2" disabled={isLoading}>
                 <Download className="h-4 w-4" />
                 Download CSV Report
@@ -206,17 +209,20 @@ const Admin = () => {
           </div>
         ) : (
           <>
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by task ID, requester name, or description..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+            <div className="grid gap-6">
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by task ID, requester name, or description..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
             </div>
+
             <Dashboard 
               requests={requests.filter((request) => {
                 const query = searchQuery.trim().toLowerCase();

@@ -47,6 +47,73 @@ export function useCreateEmployee() {
   });
 }
 
+export function useUpdateEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (employee: {
+      id: string;
+      employee_id: string;
+      full_name: string;
+      branch: string;
+      email?: string | null;
+    }) => {
+      const { data, error } = await supabase
+        .from('employees')
+        .update({
+          employee_id: employee.employee_id,
+          full_name: employee.full_name,
+          branch: employee.branch,
+          email: employee.email ?? null,
+        })
+        .eq('id', employee.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+    },
+  });
+}
+
+export function useDeleteEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.from('employees').delete().eq('id', id).select();
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Employee not found or not deleted.');
+      }
+      return id;
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['employees'] });
+
+      const previousEmployees = queryClient.getQueryData<Employee[]>(['employees']);
+      if (previousEmployees) {
+        queryClient.setQueryData<Employee[]>(['employees'], previousEmployees.filter((employee) => employee.id !== id));
+      }
+
+      return { previousEmployees };
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previousEmployees) {
+        queryClient.setQueryData(['employees'], context.previousEmployees);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+    },
+  });
+}
+
 export function useFindOrCreateEmployee() {
   const queryClient = useQueryClient();
 

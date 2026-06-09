@@ -52,7 +52,7 @@ const Index = () => {
           title: 'Login Successful',
           description: 'Welcome back!',
         });
-        navigate(userRole === 'admin' ? '/admin' : '/request');
+        navigate(userRole === 'admin' ? '/admin' : '/requester');
       }
     } catch (error) {
       toast({
